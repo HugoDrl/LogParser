@@ -1,0 +1,13 @@
+2024-01-15T10:23:45Z [ERROR] service=auth message="login failed" user=john duration=45ms
+2024-01-15T10:23:46Z [INFO] service=api message="request completed" endpoint=/users duration=120ms
+2024-01-15T10:23:47Z [WARN] service=auth message="rate limit approached" user=jane duration=12ms
+2024-01-15T10:24:00Z [INFO] service=api message="request completed" endpoint=/health duration=3ms
+2024-01-15T10:24:15Z [ERROR] service=db message="connection timeout" host=primary duration=5000ms
+2024-01-15T10:24:20Z [INFO] service=auth message="login success" user=jane duration=30ms
+2024-01-15T10:24:30Z [INFO] service=api message="request completed" endpoint=/orders duration=250ms
+this is not a valid log line
+2024-01-15T10:25:00Z [ERROR] service=api message="internal error" endpoint=/payments duration=800ms
+2024-01-15T10:25:30Z [INFO] service=db message="query executed" table=users duration=15ms
+2024-01-15T10:26:00Z [WARN] service=api message="slow response" endpoint=/reports duration=2000ms
+2024-01-15T10:26:30Z [DEBUG] service=auth message="token refreshed" user=john duration=5ms
+malformed [NOPE service=test

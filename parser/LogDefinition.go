@@ -1,15 +1,17 @@
 package parser
 
-import "time"
+import (
+	"time"
+)
 
-type Level int
+type Level string
 
 const (
-	Debug Level = iota
-	Info
-	Warning
-	Error
-	Fatal
+	Debug   Level = "debug"
+	Info    Level = "info"
+	Warning Level = "warning"
+	Error   Level = "error"
+	Fatal   Level = "fatal"
 )
 
 type Log struct {
