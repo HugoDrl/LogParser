@@ -12,10 +12,10 @@ func (e *FileError) Error() string {
 }
 
 type ParseError struct {
-	File   string
+	File   FileError
 	Line   int
 	Reason string
-	err    error
+	Err    error
 }
 
 func (e *ParseError) Error() string {
@@ -23,11 +23,11 @@ func (e *ParseError) Error() string {
 }
 
 type ValueError struct {
-	File          string
+	File          FileError
 	Line          int
 	ErroredValue  string
 	ExpectedValue string
-	err           error
+	Err           error
 }
 
 func (e *ValueError) Error() string {
