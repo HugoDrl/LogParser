@@ -3,19 +3,20 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
+	"strings"
 	"sync"
+	"time"
 
 	"git.hugoderlyn.com/Hugo/goLogParser.git/analyser"
 	"git.hugoderlyn.com/Hugo/goLogParser.git/parser"
 )
 
-func ProcessFiles(filepaths []string, outChan chan<- *parser.Log, errsChan chan<- error, wg *sync.WaitGroup) {
-	for _, filepath := range filepaths {
+func ProcessFiles(settings *parser.ParseSettings, outChan chan<- *parser.Log, errsChan chan<- error, wg *sync.WaitGroup) {
+	for _, filepath := range settings.Files {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			values, errors := parser.ParseFile(filepath)
+			values, errors := parser.ParseFile(filepath, settings)
 			for len(values) > 0 || len(errors) > 0 {
 				var closableOutChan chan<- *parser.Log
 				var closableErrsChan chan<- error
@@ -44,18 +45,58 @@ func ProcessFiles(filepaths []string, outChan chan<- *parser.Log, errsChan chan<
 	}
 }
 
+func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
+	files := flag.String("files", "", "log files to analyse")
+	startDate := flag.String("start", "", "logs date to start from")
+	endDate := flag.String("end", "", "logs date to end to")
+	service := flag.String("service", "", "filter logs by service")
+	level := flag.String("level", "", "filter logs by level")
+	slowestLogs := flag.Int("top", 0, "number of slowest logs to show")
+	flag.Parse()
+
+	if *files == "" {
+		return nil, nil, errors.New("Please specify file(s) separated by a comma using --files flag")
+	}
+
+	var processedStartDate time.Time
+	var processedEndDate time.Time
+	var processErr error
+	if *startDate != "" {
+		processedStartDate, processErr = time.Parse(time.RFC3339, *startDate)
+		if processErr != nil {
+			return nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
+		}
+	}
+	if *endDate != "" {
+		processedEndDate, processErr = time.Parse(time.RFC3339, *endDate)
+		if processErr != nil {
+			return nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
+		}
+	}
+
+	parsingSettings := parser.ParseSettings{
+		Files: strings.Split(*files, ","),
+		StartDate: processedStartDate,
+		EndDate: processedEndDate,
+		Level: parser.Level(*level),
+		Service: *service,
+	}
+	analyserSettings := analyser.AnalyserSettings{
+		SlowestLogsToRetrieve: *slowestLogs,
+	}
+	return &parsingSettings, &analyserSettings, nil
+}
+
 func main() {
-	files := flag.String("files", "", "log files to analyse")
-	files := flag.String("files", "", "log files to analyse")
-	files := flag.String("files", "", "log files to analyse")
-	files := flag.String("files", "", "log files to analyse")
-	files := flag.String("files", "", "log files to analyse")
+	parsingSettings, analyserSettings, err := initSettings()
+	if err != nil {
+		panic(err.Error())
+	}
 
 	out := make(chan *parser.Log, 10)
 	errs := make(chan error, 10)
 	var wgFiles sync.WaitGroup
-	var wgProcess sync.WaitGroup
-	ProcessFiles([]string{"test1.log", "test2.log", "test3.log"}, out, errs, &wgFiles)
+	ProcessFiles(parsingSettings, out, errs, &wgFiles)
 
 	go func() {
 		wgFiles.Wait()
@@ -63,33 +104,6 @@ func main() {
 		close(errs)
 	}()
 
-	wgProcess.Add(1)
-	go func() {
-		defer wgProcess.Done()
-		metrics := analyser.AnalyseLogs(out, 3)
-		fmt.Println(metrics)
-		for _, s := range metrics.ServicePerformance {
-			fmt.Println(s)
-		}
-		for _, l := range metrics.SlowestInput {
-			fmt.Println(l)
-		}
-	}()
-
-	wgProcess.Add(1)
-	go func() {
-		linesErrCounter := 0
-		defer wgProcess.Done()
-		for err := range errs {
-			var fileErr *parser.FileError
-			if errors.As(err, &fileErr) {
-				fmt.Println(err.Error())
-			} else {
-				linesErrCounter++
-			}
-		}
-		fmt.Printf("%d errors on lines encountered.\n", linesErrCounter)
-	}()
-
-	wgProcess.Wait()
+	metrics := analyser.AnalyseLogs(out, errs , analyserSettings)
+	metrics.Display()
 }

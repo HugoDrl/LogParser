@@ -22,3 +22,11 @@ type Log struct {
 	Service  string
 	extra    map[string]string
 }
+
+type ParseSettings struct {
+	Files []string
+	StartDate time.Time
+	EndDate time.Time
+	Level Level
+	Service string
+}

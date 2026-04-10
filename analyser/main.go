@@ -1,7 +1,9 @@
 package analyser
 
 import (
+	"errors"
 	"sort"
+	"sync"
 	"time"
 
 	"git.hugoderlyn.com/Hugo/goLogParser.git/parser"
@@ -29,8 +31,11 @@ func (m *CollectionMetric) handleService(log *parser.Log) {
 	m.ServicePerformance[log.Service] = s
 }
 
-func (m *CollectionMetric) handleSlowestLogs(N int, log *parser.Log) {
-	if len(m.SlowestInput) < N {
+func (m *CollectionMetric) handleSlowestLogs(slowestLogsToRetrieve int, log *parser.Log) {
+	if slowestLogsToRetrieve == 0 {
+		return
+	}
+	if len(m.SlowestInput) < slowestLogsToRetrieve {
 		m.SlowestInput = append(m.SlowestInput, log)
 		return
 	}
@@ -43,13 +48,30 @@ func (m *CollectionMetric) handleSlowestLogs(N int, log *parser.Log) {
 	}
 }
 
-func AnalyseLogs(logChan <-chan *parser.Log, slowestLogs int) *CollectionMetric {
+func AnalyseLogs(logChan <-chan *parser.Log, errChan <-chan error, settings *AnalyserSettings) *CollectionMetric {
 	metrics := newMetrics()
-	for log := range logChan {
-		metrics.Lines[log.Level]++
-		metrics.handleService(log)
-		metrics.handleSlowestLogs(slowestLogs, log)
-	}
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		for log := range logChan {
+			metrics.Lines[log.Level]++
+			metrics.handleService(log)
+			metrics.handleSlowestLogs(settings.SlowestLogsToRetrieve, log)
+		}
+	})
+
+	wg.Go(func() {
+		for err := range errChan {
+			var fileErr *parser.FileError
+			if errors.As(err, &fileErr) {
+				metrics.FileErrors = append(metrics.FileErrors, fileErr)
+			} else {
+				metrics.ParsingErrorCount++
+			}
+		}
+	})
+
+	wg.Wait()
 
 	return metrics
 }

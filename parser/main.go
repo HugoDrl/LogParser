@@ -94,19 +94,38 @@ func parseLine(line string) (*Log, error) {
 	}, nil
 }
 
-func parseLog(content string) ([]*Log, []error) {
-	lines := strings.Split(content, "\r\n")
+func checkLogValidity(log *Log, settings *ParseSettings) bool {
+	if !settings.StartDate.IsZero() && log.Time.Compare(settings.StartDate) < 0 {
+		return false
+	}
+	if !settings.EndDate.IsZero() && log.Time.Compare(settings.EndDate) > 0 {
+		return false
+	}
+	if settings.Level != "" && log.Level != settings.Level {
+		return false
+	}
+	if settings.Service != "" && log.Service != settings.Service {
+		return false
+	}
+	return true
+}
+
+func parseLog(content string, settings *ParseSettings) ([]*Log, []error) {
+	lines := strings.Split(content, "\n")
 	var logs []*Log
 	var logsErrors []error
 
 	for line_no, line := range lines {
+		if line == "" {
+			continue
+		}
 		if log, err := parseLine(line); err != nil {
 			var valueErr *ValueError
 			if errors.As(err, &valueErr) {
 				valueErr.Line = line_no
 			}
 			logsErrors = append(logsErrors, err)
-		} else {
+		} else if checkLogValidity(log, settings) {
 			logs = append(logs, log)
 		}
 	}
@@ -114,7 +133,7 @@ func parseLog(content string) ([]*Log, []error) {
 	return logs, logsErrors
 }
 
-func ParseFile(file string) ([]*Log, []error) {
+func ParseFile(file string, settings *ParseSettings) ([]*Log, []error) {
 	logsParsed := make([]*Log, 0)
 	logsErr := make([]error, 0)
 	content, err := readFile(file)
@@ -122,7 +141,7 @@ func ParseFile(file string) ([]*Log, []error) {
 		return nil, []error{err}
 	}
 
-	logs, errs := parseLog(string(content))
+	logs, errs := parseLog(string(content), settings)
 	if errs != nil {
 		var fileErr *FileError
 		for _, err := range errs {
