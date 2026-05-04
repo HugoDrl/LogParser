@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"errors"
 	"flag"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -90,11 +92,12 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 func main() {
 	parsingSettings, analyserSettings, err := initSettings()
 	if err != nil {
-		panic(err.Error())
+		os.Stderr.WriteString(fmt.Sprintln(err))
+		os.Exit(1)
 	}
 
-	out := make(chan *parser.Log, 10)
-	errs := make(chan error, 10)
+	out := make(chan *parser.Log)
+	errs := make(chan error)
 	var wgFiles sync.WaitGroup
 	ProcessFiles(parsingSettings, out, errs, &wgFiles)
 
