@@ -16,12 +16,12 @@ Currently, only one format of logs is supported :
 
 DATE [LEVEL] service=SERVICE message=MESSAGE duration=DURATION PROPS
 
-**DATE** is date and time, RFC3339 format (YYYY\-MM\-DDTHH\:MM\:SSZ)
-**LEVEL** is a string in [DEBUG, INFO, WARNING, ERROR, FATAL]
-**SERVICE** is a string describing service logged
-**MESSAGE** is a message
-**DURATION** is the duration of the process, in milliseconds, in the format XXXXms
-**PROPS** is one or multiple key-value pairs, in the format key=value, separated by spaces
+- **DATE** is date and time, RFC3339 format (YYYY\-MM\-DDTHH\:MM\:SSZ)
+- **LEVEL** is a string in [DEBUG, INFO, WARNING, ERROR, FATAL]
+- **SERVICE** is a string describing service logged
+- **MESSAGE** is a message
+- **DURATION** is the duration of the process, in milliseconds, in the format XXXXms
+- **PROPS** is one or multiple key-value pairs, in the format key=value, separated by spaces
 
 
 ## Flags
