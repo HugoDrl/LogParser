@@ -1,6 +1,7 @@
-# This log parser is a CLI tool that allows user to parse log the following format:
+# Log parser
+This log parser is a CLI tool that allows user to parse log the following format:
 
-##Behavior
+## Behavior
 The behavior of the tool is the following
 The tool will read one or several log files, given by user. The tool will extract only supported format logs and aggregate them.
 The aggregations are the following:
