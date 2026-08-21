@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -71,8 +72,23 @@ func ProcessFiles(
 	}
 }
 
+func getLogFilesFromDir(dirName string) ([]string, error) {
+	var logFiles []string
+	err := filepath.Walk(dirName, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if _, ok := strings.CutSuffix(path, ".log"); ok {
+			logFiles = append(logFiles, path)
+		}
+		return nil
+	})
+	return logFiles, err
+}
+
 func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 	files := flag.String("files", "", "log files to analyse")
+	dirs := flag.String("dirs", "", "dirs containing log files")
 	json := flag.Bool("json", false, "wether or not format to parse is json")
 	startDate := flag.String("start", "", "logs date to start from")
 	endDate := flag.String("end", "", "logs date to end to")
@@ -81,8 +97,8 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 	slowestLogs := flag.Int("top", 0, "number of slowest logs to show")
 	flag.Parse()
 
-	if *files == "" {
-		return nil, nil, errors.New("Please specify file(s) separated by a comma using --files flag")
+	if *files == "" && *dirs == "" {
+		return nil, nil, errors.New("Please specify file(s) separated by a comma using --files or --dirs flag")
 	}
 
 	var processedStartDate time.Time
@@ -101,8 +117,19 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 		}
 	}
 
+	logFiles := strings.Split(*files, ",")
+	if *dirs != "" {
+		for dir := range strings.SplitSeq(*dirs, ",") {
+			foundFiles, err := getLogFilesFromDir(dir)
+			if err != nil {
+				return nil, nil, err
+			}
+			logFiles = append(logFiles, foundFiles...)
+		}
+	}
+
 	parsingSettings := parser.ParseSettings{
-		Files:     strings.Split(*files, ","),
+		Files:     logFiles,
 		Json:      *json,
 		StartDate: processedStartDate,
 		EndDate:   processedEndDate,
