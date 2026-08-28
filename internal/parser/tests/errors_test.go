@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/HugoDrl/zebra/parser"
+	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/google/go-cmp/cmp"
 )
 

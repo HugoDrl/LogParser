@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HugoDrl/zebra/analyser"
-	"github.com/HugoDrl/zebra/parser"
+	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/parser"
 )
 
 func extractLinesFromFile(reader *bufio.Reader, json bool, outChan chan<- *parser.Log, errsChan chan<- error) {

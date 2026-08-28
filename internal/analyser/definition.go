@@ -3,7 +3,7 @@ package analyser
 import (
 	"time"
 
-	"github.com/HugoDrl/zebra/parser"
+	"github.com/HugoDrl/zebra/internal/parser"
 )
 
 type CollectionMetric struct {

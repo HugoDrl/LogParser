@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/HugoDrl/zebra/analyser"
-	"github.com/HugoDrl/zebra/parser"
+	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/google/go-cmp/cmp"
 )
 
