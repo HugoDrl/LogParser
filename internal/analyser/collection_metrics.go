@@ -4,7 +4,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/HugoDrl/zebra/parser"
+	"github.com/HugoDrl/zebra/internal/parser"
 )
 
 func validateLog(log parser.Log) bool {
