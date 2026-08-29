@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+type ParseFunction func(string) (Log, error)
+
 func getConsumedJSONFields(t reflect.Type) map[string]struct{} {
 	foundFields := make(map[string]struct{}, t.NumField())
 	for field := range t.Fields() {
@@ -124,4 +126,11 @@ func ParseDefaultFormatLine(line string) (Log, error) {
 		Extra:    fields,
 		Duration: Duration(duration),
 	}, nil
+}
+
+func GetParseFunction(settings ParseSettings) ParseFunction {
+	if settings.Json {
+		return ParseJSONFormatLine
+	}
+	return ParseDefaultFormatLine
 }

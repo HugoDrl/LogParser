@@ -17,30 +17,30 @@ import (
 	"github.com/HugoDrl/zebra/internal/parser"
 )
 
-func extractLinesFromFile(reader *bufio.Reader, json bool, outChan chan<- *parser.Log, errsChan chan<- error) {
-	scanner := bufio.NewScanner(reader)
+type extractLinesFromFileInput struct {
+	reader        *bufio.Reader
+	parseFunction parser.ParseFunction
+	logsChan      chan<- *parser.Log
+	errsChan      chan<- error
+}
+
+func extractLinesFromFile(input extractLinesFromFileInput) {
+	scanner := bufio.NewScanner(input.reader)
 
 	for {
 		if ok := scanner.Scan(); !ok {
 			if err := scanner.Err(); err != nil {
-				errsChan <- err
+				input.errsChan <- err
 			}
 			return
 		}
 		contentLine := scanner.Text()
 
-		var log parser.Log
-		var err error
-
-		if json {
-			log, err = parser.ParseJSONFormatLine(string(contentLine))
-		} else {
-			log, err = parser.ParseDefaultFormatLine(string(contentLine))
-		}
+		log, err := input.parseFunction(contentLine)
 		if err != nil {
-			errsChan <- err
+			input.errsChan <- err
 		} else {
-			outChan <- &log
+			input.logsChan <- &log
 		}
 	}
 }
@@ -68,7 +68,13 @@ func ProcessFiles(
 				return
 			}
 			r := bufio.NewReader(reader)
-			extractLinesFromFile(r, settings.Json, outChan, errsChan)
+
+			extractLinesFromFile(extractLinesFromFileInput{
+				reader:        r,
+				parseFunction: parser.GetParseFunction(*settings),
+				logsChan:      outChan,
+				errsChan:      errsChan,
+			})
 		})
 	}
 }
