@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/filter"
 	"github.com/HugoDrl/zebra/internal/parser"
 )
 
@@ -86,7 +87,7 @@ func getLogFilesFromDir(dirName string) ([]string, error) {
 	return logFiles, err
 }
 
-func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
+func initSettings() (*parser.ParseSettings, *filter.Filters, *analyser.AnalyserSettings, error) {
 	files := flag.String("files", "", "log files to analyse")
 	dirs := flag.String("dirs", "", "dirs containing log files")
 	json := flag.Bool("json", false, "wether or not format to parse is json")
@@ -98,7 +99,7 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 	flag.Parse()
 
 	if *files == "" && *dirs == "" {
-		return nil, nil, errors.New("Please specify file(s) separated by a comma using --files or --dirs flag")
+		return nil, nil, nil, errors.New("Please specify file(s) separated by a comma using --files or --dirs flag")
 	}
 
 	var processedStartDate time.Time
@@ -107,13 +108,13 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 	if *startDate != "" {
 		processedStartDate, processErr = time.Parse(time.RFC3339, *startDate)
 		if processErr != nil {
-			return nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
+			return nil, nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
 		}
 	}
 	if *endDate != "" {
 		processedEndDate, processErr = time.Parse(time.RFC3339, *endDate)
 		if processErr != nil {
-			return nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
+			return nil, nil, nil, errors.New("Wrong format for starting date - excpected RFC3339")
 		}
 	}
 
@@ -122,15 +123,17 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 		for dir := range strings.SplitSeq(*dirs, ",") {
 			foundFiles, err := getLogFilesFromDir(dir)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			logFiles = append(logFiles, foundFiles...)
 		}
 	}
 
 	parsingSettings := parser.ParseSettings{
-		Files:     logFiles,
-		Json:      *json,
+		Files: logFiles,
+		Json:  *json,
+	}
+	filters := filter.Filters{
 		StartDate: processedStartDate,
 		EndDate:   processedEndDate,
 		Level:     parser.Level(*level),
@@ -139,11 +142,11 @@ func initSettings() (*parser.ParseSettings, *analyser.AnalyserSettings, error) {
 	analyserSettings := analyser.AnalyserSettings{
 		SlowestLogsToRetrieve: *slowestLogs,
 	}
-	return &parsingSettings, &analyserSettings, nil
+	return &parsingSettings, &filters, &analyserSettings, nil
 }
 
 func main() {
-	parsingSettings, analyserSettings, err := initSettings()
+	parsingSettings, filters, analyserSettings, err := initSettings()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -152,8 +155,9 @@ func main() {
 	out := make(chan *parser.Log)
 	errs := make(chan error)
 	go ProcessFiles(parsingSettings, out, errs)
+	filteredLogs := filter.ProcessFilter(out, filters)
 
-	metrics := analyser.AnalyseLogs(out, errs, analyserSettings)
+	metrics := analyser.AnalyseLogs(filteredLogs, errs, analyserSettings)
 	if payload, err := json.Marshal(metrics); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

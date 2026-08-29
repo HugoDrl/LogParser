@@ -1,6 +1,8 @@
-package parser
+package filter
 
-func filterLog(log *Log, filters *ParseSettings) bool {
+import "github.com/HugoDrl/zebra/internal/parser"
+
+func filterLog(log *parser.Log, filters *Filters) bool {
 	if !filters.StartDate.IsZero() && log.Time.Compare(filters.StartDate) < 0 {
 		return false
 	}
