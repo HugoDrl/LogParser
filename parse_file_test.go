@@ -12,15 +12,32 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func emptyChan[T any](channel chan T) []T {
-	array := make([]T, 0)
-	for value := range channel {
-		array = append(array, value)
+func emptyBothChannels(logChan <-chan *parser.Log, errsChan <-chan error) ([]*parser.Log, []error) {
+	logs := make([]*parser.Log, 0)
+	errs := make([]error, 0)
+	c := 2
+	for {
+		select {
+		case log, ok := <-logChan:
+			if !ok {
+				c--
+				if c == 0 {
+					return logs, errs
+				}
+				continue
+			}
+			logs = append(logs, log)
+		case err, ok := <-errsChan:
+			if !ok {
+				c--
+				if c == 0 {
+					return logs, errs
+				}
+				continue
+			}
+			errs = append(errs, err)
+		}
 	}
-	if len(array) == 0 {
-		return nil
-	}
-	return array
 }
 
 func prepareFilesForTests(fileName string, content []byte) error {
@@ -53,6 +70,10 @@ func TestParseLogsFromFile(t *testing.T) {
 			inputParseSettings: parser.ParseSettings{
 				Files: []string{"temp_parse_logs_from_file.txt"},
 			},
+			expected: expectedStruct{
+				Logs: []*parser.Log{},
+				Errs: []error{},
+			},
 		},
 		"file with a valid log should parse it": {
 			inputFileContent: []string{
@@ -72,6 +93,7 @@ func TestParseLogsFromFile(t *testing.T) {
 						Extra:    map[string]string{},
 					},
 				},
+				Errs: []error{},
 			},
 		},
 		"several files with several valid logs should parse them all": {
@@ -104,6 +126,7 @@ func TestParseLogsFromFile(t *testing.T) {
 						Extra:    map[string]string{},
 					},
 				},
+				Errs: []error{},
 			},
 		},
 		"several files, but one has invalid content should return both logs and errors": {
@@ -160,6 +183,7 @@ func TestParseLogsFromFile(t *testing.T) {
 						Extra:    map[string]string{},
 					},
 				},
+				Errs: []error{},
 			},
 		},
 		"file in dir should be read correctly": {
@@ -182,6 +206,7 @@ func TestParseLogsFromFile(t *testing.T) {
 						Extra:    map[string]string{},
 					},
 				},
+				Errs: []error{},
 			},
 		},
 	}
@@ -200,22 +225,13 @@ func TestParseLogsFromFile(t *testing.T) {
 				}
 			}
 
-			// Channels are 100 values max.
-			// Because current tests architecture implies to fill channels before closing and reading,
-			// This means current tests should not be more than 100 values for each
-			logChan := make(chan *parser.Log, 100)
-			errsChan := make(chan error, 100)
+			logChan, errsChan := zebra.ProcessFiles(&test.inputParseSettings)
 
-			// Actual tested function
-			zebra.ProcessFiles(&test.inputParseSettings, logChan, errsChan)
-
+			logs, errs := emptyBothChannels(logChan, errsChan)
 			// Clean files
 			for _, file := range test.inputParseSettings.Files {
 				os.Remove(file)
 			}
-			// Retrieve channels informations and test
-			logs := emptyChan(logChan)
-			errs := emptyChan(errsChan)
 
 			// Sort logs by time to be predictible for comparison
 			sort.Slice(logs, func(i, j int) bool {
