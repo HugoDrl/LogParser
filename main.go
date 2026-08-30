@@ -27,6 +27,7 @@ type extractLinesFromFileInput struct {
 func extractLinesFromFile(input extractLinesFromFileInput) {
 	scanner := bufio.NewScanner(input.reader)
 
+	lineNo := 0
 	for {
 		if ok := scanner.Scan(); !ok {
 			if err := scanner.Err(); err != nil {
@@ -34,11 +35,15 @@ func extractLinesFromFile(input extractLinesFromFileInput) {
 			}
 			return
 		}
+		lineNo++
 		contentLine := scanner.Text()
 
 		log, err := input.parseFunction(contentLine)
 		if err != nil {
-			input.errsChan <- err
+			input.errsChan <- &parser.ParseError{
+				Line: lineNo,
+				Err:  err,
+			}
 		} else {
 			input.logsChan <- &log
 		}
@@ -54,20 +59,24 @@ func ProcessFiles(
 		defer close(logsChan)
 		defer close(errsChan)
 		var wg sync.WaitGroup
+		root, err := os.OpenRoot(".")
+		if err != nil {
+			errsChan <- err
+			return
+		}
+		defer root.Close()
 		defer wg.Wait()
 		for _, filepath := range settings.Files {
 			wg.Go(func() {
-				root, err := os.OpenRoot(".")
-				if err != nil {
-					errsChan <- err
-					return
-				}
-				defer root.Close()
 				reader, err := root.OpenFile(filepath, os.O_RDONLY, 0o000)
 				if err != nil {
-					errsChan <- err
+					errsChan <- &parser.FileError{
+						File: filepath,
+						Err:  err,
+					}
 					return
 				}
+				defer reader.Close()
 				r := bufio.NewReader(reader)
 
 				extractLinesFromFile(extractLinesFromFileInput{

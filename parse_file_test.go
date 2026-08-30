@@ -45,6 +45,7 @@ func prepareFilesForTests(fileName string, content []byte) error {
 	if err != nil {
 		return err
 	}
+	defer root.Close()
 
 	// Allow subdirs in file name
 	root.MkdirAll(filepath.Dir(fileName), 0o777)
@@ -151,7 +152,13 @@ func TestParseLogsFromFile(t *testing.T) {
 						Extra:    map[string]string{},
 					},
 				},
-				Errs: []error{&parser.ValueError{ErroredValue: "invalid", ExpectedValue: "time format - RFC3339"}},
+				Errs: []error{&parser.ParseError{
+					Line: 1,
+					Err: &parser.ValueError{
+						ErroredValue:  "invalid",
+						ExpectedValue: "time format - RFC3339",
+					},
+				}},
 			},
 		},
 		"one file with several logs should parse them all": {
