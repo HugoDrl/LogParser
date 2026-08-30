@@ -47,36 +47,39 @@ func extractLinesFromFile(input extractLinesFromFileInput) {
 
 func ProcessFiles(
 	settings *parser.ParseSettings,
-	outChan chan<- *parser.Log,
-	errsChan chan<- error,
-) {
-	defer close(outChan)
-	defer close(errsChan)
-	var wg sync.WaitGroup
-	defer wg.Wait()
-	for _, filepath := range settings.Files {
-		wg.Go(func() {
-			root, err := os.OpenRoot(".")
-			if err != nil {
-				errsChan <- err
-				return
-			}
-			defer root.Close()
-			reader, err := root.OpenFile(filepath, os.O_RDONLY, 0o000)
-			if err != nil {
-				errsChan <- err
-				return
-			}
-			r := bufio.NewReader(reader)
+) (<-chan *parser.Log, <-chan error) {
+	logsChan := make(chan *parser.Log)
+	errsChan := make(chan error)
+	go func() {
+		defer close(logsChan)
+		defer close(errsChan)
+		var wg sync.WaitGroup
+		defer wg.Wait()
+		for _, filepath := range settings.Files {
+			wg.Go(func() {
+				root, err := os.OpenRoot(".")
+				if err != nil {
+					errsChan <- err
+					return
+				}
+				defer root.Close()
+				reader, err := root.OpenFile(filepath, os.O_RDONLY, 0o000)
+				if err != nil {
+					errsChan <- err
+					return
+				}
+				r := bufio.NewReader(reader)
 
-			extractLinesFromFile(extractLinesFromFileInput{
-				reader:        r,
-				parseFunction: parser.GetParseFunction(*settings),
-				logsChan:      outChan,
-				errsChan:      errsChan,
+				extractLinesFromFile(extractLinesFromFileInput{
+					reader:        r,
+					parseFunction: parser.GetParseFunction(*settings),
+					logsChan:      logsChan,
+					errsChan:      errsChan,
+				})
 			})
-		})
-	}
+		}
+	}()
+	return logsChan, errsChan
 }
 
 func getLogFilesFromDir(dirName string) ([]string, error) {
@@ -158,12 +161,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	out := make(chan *parser.Log)
-	errs := make(chan error)
-	go ProcessFiles(parsingSettings, out, errs)
-	filteredLogs := filter.ProcessFilter(out, filters)
+	logsChan, errsChan := ProcessFiles(parsingSettings)
+	filteredLogs := filter.ProcessFilter(logsChan, filters)
 
-	metrics := analyser.AnalyseLogs(filteredLogs, errs, analyserSettings)
+	metrics := analyser.AnalyseLogs(filteredLogs, errsChan, analyserSettings)
 	if payload, err := json.Marshal(metrics); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
