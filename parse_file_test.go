@@ -1,4 +1,4 @@
-package main_test
+package main
 
 import (
 	"os"
@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	zebra "github.com/HugoDrl/zebra"
 	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/google/go-cmp/cmp"
 )
@@ -232,7 +231,7 @@ func TestParseLogsFromFile(t *testing.T) {
 				}
 			}
 
-			logChan, errsChan := zebra.ProcessFiles(&test.inputParseSettings)
+			logChan, errsChan := processFiles(&test.inputParseSettings)
 
 			logs, errs := emptyBothChannels(logChan, errsChan)
 			// Clean files
