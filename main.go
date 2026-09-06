@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"github.com/HugoDrl/zebra/internal/flags"
 	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/HugoDrl/zebra/internal/reader"
+	"github.com/HugoDrl/zebra/internal/server"
 )
 
 func processFiles(
@@ -66,10 +66,7 @@ func main() {
 	filteredLogs := filter.ProcessFilter(logsChan, filters)
 
 	metrics := analyser.AnalyseLogs(filteredLogs, errsChan, analyserSettings)
-	if payload, err := json.Marshal(metrics); err != nil {
+	if err := server.NewServer(&server.DataLayer{Metrics: *metrics}).StartServer(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	} else {
-		fmt.Println(string(payload))
 	}
 }
