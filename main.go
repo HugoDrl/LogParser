@@ -43,7 +43,7 @@ func processFiles(
 				defer filesReader.Close()
 				r := bufio.NewReader(filesReader)
 
-				reader.ExtractLinesFromFile(reader.ExtractLinesFromFileInput{
+				reader.ExtractLinesFromReader(reader.ExtractLinesFromFileInput{
 					Reader:        r,
 					ParseFunction: parser.GetParseFunction(*settings),
 					LogsChan:      logsChan,

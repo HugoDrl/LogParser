@@ -13,7 +13,7 @@ type ExtractLinesFromFileInput struct {
 	ErrsChan      chan<- error
 }
 
-func ExtractLinesFromFile(input ExtractLinesFromFileInput) {
+func ExtractLinesFromReader(input ExtractLinesFromFileInput) {
 	scanner := bufio.NewScanner(input.Reader)
 
 	lineNo := 0
