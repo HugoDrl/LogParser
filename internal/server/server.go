@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/HugoDrl/zebra/internal/analyser"
 )
@@ -20,7 +21,7 @@ func NewServer(data *DataLayer) *HttpServer {
 	data.AttachMetricsHandler(handler)
 
 	s := &HttpServer{
-		server:    &http.Server{Addr: ":8000"},
+		server:    &http.Server{Addr: ":8000", ReadHeaderTimeout: 100 * time.Millisecond},
 		dataLayer: data,
 	}
 	s.server.Handler = handler

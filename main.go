@@ -66,5 +66,7 @@ func main() {
 	filteredLogs := filter.ProcessFilter(logsChan, filters)
 
 	metrics := analyser.AnalyseLogs(filteredLogs, errsChan, analyserSettings)
-	server.NewServer(&server.DataLayer{Metrics: *metrics}).StartServer()
+	if err := server.NewServer(&server.DataLayer{Metrics: *metrics}).StartServer(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
 }

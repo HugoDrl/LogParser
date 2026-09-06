@@ -11,7 +11,9 @@ func (d *DataLayer) getMetrics(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	w.Write(payload)
+	if _, err := w.Write(payload); err != nil {
+		w.WriteHeader(500)
+	}
 }
 
 func (d *DataLayer) AttachMetricsHandler(handler *http.ServeMux) {
