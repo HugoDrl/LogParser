@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/analyser/utils"
 	"github.com/HugoDrl/zebra/internal/filter"
 	"github.com/HugoDrl/zebra/internal/flags"
 	"github.com/HugoDrl/zebra/internal/parser"
@@ -56,7 +56,7 @@ func processFiles(
 }
 
 func main() {
-	parsingSettings, filters, analyserSettings, err := flags.InitSettings()
+	parsingSettings, filters, analyseSettings, err := flags.InitSettings()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -65,8 +65,15 @@ func main() {
 	logsChan, errsChan := processFiles(parsingSettings)
 	filteredLogs := filter.ProcessFilter(logsChan, filters)
 
-	metrics := analyser.AnalyseLogs(filteredLogs, errsChan, analyserSettings)
-	if err := server.NewServer(&server.DataLayer{Metrics: *metrics}).StartServer(); err != nil {
+	logs, errs := utils.ExtractLogAndErrChanToSlices(filteredLogs, errsChan)
+
+	if err := server.NewServer(
+		&server.DataLayer{
+			Logs:            logs,
+			Errs:            errs,
+			AnalyseSettings: analyseSettings,
+		},
+	).StartServer(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
 }

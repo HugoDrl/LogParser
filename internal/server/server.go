@@ -5,10 +5,13 @@ import (
 	"time"
 
 	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/parser"
 )
 
 type DataLayer struct {
-	Metrics analyser.CollectionMetric
+	Logs            []*parser.Log
+	Errs            []error
+	AnalyseSettings *analyser.AnalyserSettings
 }
 
 type HttpServer struct {
