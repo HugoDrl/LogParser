@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/HugoDrl/zebra/internal/analyser"
+	"github.com/HugoDrl/zebra/internal/analyser/utils"
 	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/google/go-cmp/cmp"
 )
@@ -165,7 +166,8 @@ func TestLogAnalyze(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			output := analyser.AnalyseLogs(test.input.logChan, test.input.errChan, test.input.settings)
+			logs, errs := utils.ExtractLogAndErrChanToSlices(test.input.logChan, test.input.errChan)
+			output := analyser.AnalyseLogs(logs, errs, test.input.settings)
 			if diff := cmp.Diff(
 				test.expected,
 				output,

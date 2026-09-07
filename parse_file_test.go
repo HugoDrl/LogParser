@@ -7,37 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/HugoDrl/zebra/internal/analyser/utils"
 	"github.com/HugoDrl/zebra/internal/parser"
 	"github.com/google/go-cmp/cmp"
 )
-
-func emptyBothChannels(logChan <-chan *parser.Log, errsChan <-chan error) ([]*parser.Log, []error) {
-	logs := make([]*parser.Log, 0)
-	errs := make([]error, 0)
-	c := 2
-	for {
-		select {
-		case log, ok := <-logChan:
-			if !ok {
-				c--
-				if c == 0 {
-					return logs, errs
-				}
-				continue
-			}
-			logs = append(logs, log)
-		case err, ok := <-errsChan:
-			if !ok {
-				c--
-				if c == 0 {
-					return logs, errs
-				}
-				continue
-			}
-			errs = append(errs, err)
-		}
-	}
-}
 
 func prepareFilesForTests(fileName string, content []byte) error {
 	root, err := os.OpenRoot(".")
@@ -233,7 +206,7 @@ func TestParseLogsFromFile(t *testing.T) {
 
 			logChan, errsChan := processFiles(&test.inputParseSettings)
 
-			logs, errs := emptyBothChannels(logChan, errsChan)
+			logs, errs := utils.ExtractLogAndErrChanToSlices(logChan, errsChan)
 			// Clean files
 			for _, file := range test.inputParseSettings.Files {
 				os.Remove(file)
